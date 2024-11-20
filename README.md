@@ -140,7 +140,7 @@ If you'd like to contribute to this project, feel free to fork the repository an
 
 ## Challenges and Solutions
 
-### 1. **Linking Notes to Slides**
+### 1. **Extracting Titles**
 
 One of the main challenges encountered during the development of the PowerPoint extraction functionality (`01_pptx.py`) was correctly associating slide notes with their corresponding slides. PowerPoint presentations store notes in separate XML files located in the `ppt/notesSlides` folder, while slide content is stored in the `ppt/slides` folder. 
 
@@ -150,6 +150,18 @@ Initially, it was difficult to properly link notes to the correct slides, especi
 
 To overcome this, we utilized the relationship mapping provided within the PowerPoint `.pptx` structure. The `slide_to_notes` dictionary was used to map the slide files (e.g., `slide3.xml`) to their corresponding notes files (e.g., `notesSlide1.xml`).
 
+### 2. **Linking Notes to Slides** 
+
+Another challenge was accurately identifying and extracting slide titles from the XML content. Titles in PowerPoint slides are not explicitly labeled as such in the XML files, and they often appear alongside other text elements, making it difficult to distinguish them from regular content.
+
+### Solution:
+We identified titles based on their font size. In the XML structure of PowerPoint slides, titles are typically formatted with a larger font size compared to other text elements. By checking the sz attribute of text elements and extracting only those with a font size of 28 or greater, we ensured that the extracted text was most likely the title of the slide. 
+
+### 3. **Linking Notes to Slides**
+The order of slides in the extracted content was initially inconsistent due to the way files are stored in the .pptx archive. Slide files (e.g., slide1.xml, slide2.xml) are not always processed in numerical order, leading to unordered results.
+
+### Solution:
+To maintain the correct order, we extracted the slide number from each file name (e.g., extracting 1 from slide1.xml) and stored the slides in a dictionary with the slide number as the key. Before displaying the content, we sorted the dictionary by slide number, ensuring that the output matched the natural order of slides in the presentation.
 
 ## Troubleshooting
 
