@@ -1,7 +1,7 @@
 import os
 import zipfile
 import xml.etree.ElementTree as ET
-import shutil  # For deleting files and directories
+import shutil  
 
 class PowerPointXMLExtractor:
     """
@@ -22,7 +22,7 @@ class PowerPointXMLExtractor:
             'p': 'http://schemas.openxmlformats.org/presentationml/2006/main',
             'r': 'http://schemas.openxmlformats.org/package/2006/relationships',
         }
-        self.slide_text = {}
+        self.slides = {} 
         self.notes_text = {}
         self.slide_to_notes = {}
 
@@ -63,9 +63,9 @@ class PowerPointXMLExtractor:
                 root = ET.parse(file).getroot()
                 for rel in root.findall('r:Relationship', self.namespaces):
                     if 'notesSlide' in rel.attrib.get('Type', ''):
-                        slide_name = os.path.basename(rels_file).replace('.xml.rels', '')
-                        notes_name = os.path.basename(rel.attrib['Target']).replace('.xml', '')
-                        self.slide_to_notes[slide_name] = notes_name
+                        slide_number = int(os.path.basename(rels_file).replace('slide', '').replace('.xml.rels', ''))
+                        notes_number = int(os.path.basename(rel.attrib['Target']).replace('notesSlide', '').replace('.xml', ''))
+                        self.slide_to_notes[slide_number] = notes_number
 
     def parse_slide(self, slide_content, slide_file):
         """
@@ -75,14 +75,27 @@ class PowerPointXMLExtractor:
         :param slide_file: Name of the slide file for identification.
         """
         root = ET.fromstring(slide_content)
-        slide_text = []
-        # XPath to extract text from <a:t> elements within <a:p>
-        for text_element in root.findall('.//a:p/a:r/a:t', self.namespaces):
-            slide_text.append(text_element.text.strip())
+        title = ""
+        description = []
 
-        # Store the slide text
-        slide_number = os.path.basename(slide_file).replace('slide', '').replace('.xml', '')
-        self.slide_text[f"Slide {slide_number}"] = ' '.join(slide_text)
+        # XPath to extract text and check size for title
+        for p in root.findall('.//a:p', self.namespaces):
+            for r in p.findall('a:r', self.namespaces):
+                rPr = r.find('a:rPr', self.namespaces)
+                t = r.find('a:t', self.namespaces)
+                if t is not None and rPr is not None:
+                    text_size = rPr.attrib.get('sz')
+                    if text_size and int(text_size) >= 2800:  
+                        title += t.text.strip() + " "
+                    else:
+                        description.append(t.text.strip())
+
+        # Extract slide number
+        slide_number = int(os.path.basename(slide_file).replace('slide', '').replace('.xml', ''))
+        self.slides[slide_number] = {
+            "title": title.strip(),
+            "description": ' '.join(description),
+        }
 
     def parse_notes(self, notes_content, notes_file):
         """
@@ -98,32 +111,25 @@ class PowerPointXMLExtractor:
             notes_text.append(text_element.text.strip())
 
         # Store the notes text
-        notes_number = os.path.basename(notes_file).replace('notesSlide', '').replace('.xml', '')
+        notes_number = int(os.path.basename(notes_file).replace('notesSlide', '').replace('.xml', ''))
         self.notes_text[notes_number] = ' '.join(notes_text)
 
     def display_content(self):
         """
-        Displays the extracted text from slides and notes.
+        Displays the extracted slides in the desired format.
         """
         print("Slides Content:")
-        for slide, text in sorted(self.slide_text.items()):
-            print(f"{slide}: {text}")
+        for slide_number in sorted(self.slides.keys()):
+            slide = self.slides[slide_number]
+            print(f"Slide number: {slide_number}")
+            print(f"  Title: {slide['title']}")
+            print(f"  Description: {slide['description']}")
 
             # Display the corresponding notes if available
-            slide_key = slide.replace("Slide ", "slide")  # Format the slide key
-            if slide_key in self.slide_to_notes:
-                notes_key_raw = self.slide_to_notes[slide_key]  # E.g., notesSlide1
-                notes_key = notes_key_raw.replace("notesSlide", "")  # Extract the numeric part, e.g., 1
-                if notes_key in self.notes_text:
-                    print(f"  Notes: {self.notes_text[notes_key]}")
-
-    def get_content(self):
-        """
-        Returns the extracted slide and notes text as dictionaries.
-
-        :return: A tuple (slide_text, notes_text, slide_to_notes).
-        """
-        return self.slide_text, self.notes_text, self.slide_to_notes
+            notes_number = self.slide_to_notes.get(slide_number)
+            if notes_number and notes_number in self.notes_text:
+                print(f"  Notes: {self.notes_text[notes_number]}")
+            print()
 
     def cleanup(self):
         """
@@ -134,22 +140,16 @@ class PowerPointXMLExtractor:
             print(f"Temporary folder '{self.temp_folder}' has been removed.")
 
 
-# Main script
 if __name__ == "__main__":
-    # Path to your PowerPoint file
-    pptx_path = os.path.join("data", "test_pres.pptx")
+    pptx_path = os.path.join("data", "path to pptx")
 
     try:
         extractor = PowerPointXMLExtractor(pptx_path)
         extractor.extract_content()
         extractor.display_content()
 
-        # Access the extracted data
-        slide_text_data, notes_text_data, slide_to_notes_map = extractor.get_content()
-
     except Exception as e:
         print(f"Error: {e}")
     
     finally:
-        # Ensure cleanup (deletes the temporary folder)
         extractor.cleanup()
