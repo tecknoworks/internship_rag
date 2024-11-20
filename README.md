@@ -138,6 +138,18 @@ If you'd like to contribute to this project, feel free to fork the repository an
 - Write clear commit messages.
 - Provide test cases for new features or bug fixes.
 
+## Challenges and Solutions
+
+### 1. **Linking Notes to Slides**
+
+One of the main challenges encountered during the development of the PowerPoint extraction functionality (`01_pptx.py`) was correctly associating slide notes with their corresponding slides. PowerPoint presentations store notes in separate XML files located in the `ppt/notesSlides` folder, while slide content is stored in the `ppt/slides` folder. 
+
+Initially, it was difficult to properly link notes to the correct slides, especially when the filenames for notes (e.g., `notesSlide1.xml`) didn’t directly match the slide numbers (e.g., `slide3.xml`). The core of the issue was the mismatch between the naming conventions of slides and notes in the PowerPoint file structure.
+
+### Solution:
+
+To overcome this, we utilized the relationship mapping provided within the PowerPoint `.pptx` structure. The `slide_to_notes` dictionary was used to map the slide files (e.g., `slide3.xml`) to their corresponding notes files (e.g., `notesSlide1.xml`).
+
 
 ## Troubleshooting
 
